@@ -28,7 +28,6 @@ import (
 	opkit "github.com/rook/operator-kit"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/daemon/agent/flexvolume/attachment"
-	"github.com/rook/rook/pkg/operator/agent"
 	"github.com/rook/rook/pkg/operator/cluster"
 	"github.com/rook/rook/pkg/operator/file"
 	"github.com/rook/rook/pkg/operator/k8sutil"
@@ -92,12 +91,6 @@ func (o *Operator) Run() error {
 		}
 		logger.Errorf("failed to init resources. %+v. retrying...", err)
 		<-time.After(initRetryDelay)
-	}
-
-	rookAgent := agent.New(o.context.Clientset)
-
-	if err := rookAgent.Start(namespace, o.rookImage); err != nil {
-		return fmt.Errorf("Error starting agent daemonset: %v", err)
 	}
 
 	signalChan := make(chan os.Signal, 1)
