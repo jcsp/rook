@@ -21,7 +21,8 @@ import (
 	"strings"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	//"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/coreos/pkg/capnslog"
 	"github.com/spf13/cobra"
@@ -133,9 +134,17 @@ func createContext() *clusterd.Context {
 
 func getClientset() (kubernetes.Interface, apiextensionsclient.Interface, rookclient.Interface, error) {
 	// create the k8s client
-	config, err := rest.InClusterConfig()
+	/*
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to get k8s config. %+v", err)
+		}
+	*/
+
+	//config, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/config")
+	config, err := clientcmd.BuildConfigFromFlags("gravel1:8080", "")
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to get k8s config. %+v", err)
+		panic(err.Error())
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
