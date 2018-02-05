@@ -135,17 +135,25 @@ func makeDeployment(fs rookalpha.Filesystem, filesystemID, version string, hostN
 		},
 	}
 
+	/*
+		podSpec := v1.PodSpec{
+			Containers:    []v1.Container{mdsContainer(fs, filesystemID, version)},
+			RestartPolicy: v1.RestartPolicyAlways,
+			Volumes: []v1.Volume{
+				{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
+				k8sutil.ConfigOverrideVolume(),
+			},
+			HostNetwork: hostNetwork,
+		}
+	*/
 	podSpec := v1.PodSpec{
 		Containers:    []v1.Container{mdsContainer(fs, filesystemID, version)},
 		RestartPolicy: v1.RestartPolicyAlways,
-		Volumes: []v1.Volume{
-			{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
-			k8sutil.ConfigOverrideVolume(),
-		},
-		HostNetwork: hostNetwork,
+		HostNetwork:   hostNetwork,
 	}
 	if hostNetwork {
-		podSpec.DNSPolicy = v1.DNSClusterFirstWithHostNet
+		// HACK: this value does not exist in older Kubernetes
+		//podSpec.DNSPolicy = v1.DNSClusterFirstWithHostNet
 	}
 	fs.Spec.MetadataServer.Placement.ApplyToPodSpec(&podSpec)
 
@@ -173,19 +181,29 @@ func mdsContainer(fs rookalpha.Filesystem, filesystemID, version string) v1.Cont
 			"mds",
 			fmt.Sprintf("--config-dir=%s", k8sutil.DataDir),
 		},
-		Name:  instanceName(fs),
-		Image: k8sutil.MakeRookImage(version),
-		VolumeMounts: []v1.VolumeMount{
-			{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
-			k8sutil.ConfigOverrideMount(),
-		},
+		Name: instanceName(fs),
+		//Image: k8sutil.MakeRookImage(version),
+		Image: "ceph/daemon",
+		/*
+			VolumeMounts: []v1.VolumeMount{
+				{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
+				k8sutil.ConfigOverrideMount(),
+			},
+		*/
 		Env: []v1.EnvVar{
+			{Name: "KV_TYPE", Value: "etcd"},
+			{Name: "KV_IP", Value: "192.168.18.1"},
+			{Name: "KV_PORT", Value: "2379"},
+			{Name: "MDS_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+
 			{Name: "ROOK_POD_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
 			{Name: "ROOK_FILESYSTEM_ID", Value: filesystemID},
 			{Name: "ROOK_ACTIVE_STANDBY", Value: strconv.FormatBool(fs.Spec.MetadataServer.ActiveStandby)},
 			opmon.ClusterNameEnvVar(fs.Namespace),
-			opmon.EndpointEnvVar(),
-			opmon.AdminSecretEnvVar(),
+			/*
+				opmon.EndpointEnvVar(),
+				opmon.AdminSecretEnvVar(),
+			*/
 			k8sutil.PodIPEnvVar(k8sutil.PrivateIPEnvVar),
 			k8sutil.PodIPEnvVar(k8sutil.PublicIPEnvVar),
 			k8sutil.ConfigOverrideEnvVar(),
