@@ -210,8 +210,9 @@ func (c *Cluster) makeDeployment(name, daemonName string) *extensions.Deployment
 				"prometheus.io/port": strconv.Itoa(metricsPort)},
 		},
 		Spec: v1.PodSpec{
-			Containers:    []v1.Container{c.mgrContainer(name, daemonName)},
-			RestartPolicy: v1.RestartPolicyAlways,
+			ServiceAccountName: "rook-ceph-mgr",
+			Containers:         []v1.Container{c.mgrContainer(name, daemonName)},
+			RestartPolicy:      v1.RestartPolicyAlways,
 			Volumes: []v1.Volume{
 				{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
 				k8sutil.ConfigOverrideVolume(),
