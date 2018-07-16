@@ -170,13 +170,19 @@ type FilesystemList struct {
 // FilesystemSpec represents the spec of a file system
 type FilesystemSpec struct {
 	// The metadata pool settings
-	MetadataPool PoolSpec `json:"metadataPool"`
+	MetadataPool PoolSpec `json:"metadataPool,omitempty"`
 
 	// The data pool settings
-	DataPools []PoolSpec `json:"dataPools"`
+	DataPools []PoolSpec `json:"dataPools,omitempty"`
 
 	// The mds pod info
 	MetadataServer MetadataServerSpec `json:"metadataServer"`
+
+	// Do not create Ceph filesystem and pools.  Filesystem and Pools must have already been created in Ceph.
+	SkipPoolCreation bool `json:"skipPoolCreation"`
+
+	// Do not erase Ceph filesystem and pools when this filesystem is removed in Rook.
+	PreservePoolsOnRemove bool `json:"preservePoolsOnRemove"`
 }
 
 type MetadataServerSpec struct {
