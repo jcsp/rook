@@ -165,9 +165,13 @@ func (c *FilesystemController) onDelete(obj interface{}) {
 		return
 	}
 
-	err = DeleteFilesystem(c.context, *filesystem)
-	if err != nil {
-		logger.Errorf("failed to delete file system %s. %+v", filesystem.Name, err)
+	if !filesystem.Spec.PreservePoolsOnRemove {
+		err = DeleteFilesystem(c.context, *filesystem)
+		if err != nil {
+			logger.Errorf("failed to delete file system %s. %+v", filesystem.Name, err)
+		}
+	} else {
+		logger.Infof("Preserving Ceph filesystem and pools while removing Rook filesystem")
 	}
 }
 

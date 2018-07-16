@@ -46,13 +46,17 @@ func CreateFilesystem(context *clusterd.Context, fs cephv1alpha1.Filesystem, ver
 		return err
 	}
 
-	var dataPools []*model.Pool
-	for _, p := range fs.Spec.DataPools {
-		dataPools = append(dataPools, p.ToModel(""))
-	}
-	f := cephmds.NewFS(fs.Name, fs.Spec.MetadataPool.ToModel(""), dataPools, fs.Spec.MetadataServer.ActiveCount)
-	if err := f.CreateFilesystem(context, fs.Namespace); err != nil {
-		return fmt.Errorf("failed to create file system %s: %+v", fs.Name, err)
+	if !fs.Spec.SkipPoolCreation {
+		var dataPools []*model.Pool
+		for _, p := range fs.Spec.DataPools {
+			dataPools = append(dataPools, p.ToModel(""))
+		}
+		f := cephmds.NewFS(fs.Name, fs.Spec.MetadataPool.ToModel(""), dataPools, fs.Spec.MetadataServer.ActiveCount)
+		if err := f.CreateFilesystem(context, fs.Namespace); err != nil {
+			return fmt.Errorf("failed to create file system %s: %+v", fs.Name, err)
+		}
+	} else {
+		logger.Infof("Skipping Ceph Filesystem/Pool creation for Rook filesystem")
 	}
 
 	filesystem, err := client.GetFilesystem(context, fs.Namespace, fs.Name)
@@ -185,15 +189,17 @@ func validateFilesystem(context *clusterd.Context, f cephv1alpha1.Filesystem) er
 	if f.Namespace == "" {
 		return fmt.Errorf("missing namespace")
 	}
-	if len(f.Spec.DataPools) == 0 {
-		return fmt.Errorf("at least one data pool required")
-	}
-	if err := pool.ValidatePoolSpec(context, f.Namespace, &f.Spec.MetadataPool); err != nil {
-		return fmt.Errorf("invalid metadata pool. %+v", err)
-	}
-	for _, p := range f.Spec.DataPools {
-		if err := pool.ValidatePoolSpec(context, f.Namespace, &p); err != nil {
-			return fmt.Errorf("Invalid data pool. %+v", err)
+	if !f.Spec.SkipPoolCreation {
+		if len(f.Spec.DataPools) == 0 {
+			return fmt.Errorf("at least one data pool required")
+		}
+		if err := pool.ValidatePoolSpec(context, f.Namespace, &f.Spec.MetadataPool); err != nil {
+			return fmt.Errorf("invalid metadata pool. %+v", err)
+		}
+		for _, p := range f.Spec.DataPools {
+			if err := pool.ValidatePoolSpec(context, f.Namespace, &p); err != nil {
+				return fmt.Errorf("Invalid data pool. %+v", err)
+			}
 		}
 	}
 	if f.Spec.MetadataServer.ActiveCount < 1 {
