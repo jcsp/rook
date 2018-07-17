@@ -83,7 +83,7 @@ func createOrUpdate(context *clusterd.Context, store cephv1alpha1.ObjectStore, v
 
 	// create the ceph artifacts for the object store
 	objContext := cephrgw.NewContext(context, store.Name, store.Namespace)
-	err = cephrgw.CreateObjectStore(objContext, *store.Spec.MetadataPool.ToModel(""), *store.Spec.DataPool.ToModel(""), serviceIP, store.Spec.Gateway.Port)
+	err = cephrgw.CreateObjectStore(objContext, *store.Spec.MetadataPool.ToModel(""), *store.Spec.DataPool.ToModel(""), serviceIP, store.Spec.Gateway.Port, !store.Spec.SkipPoolCreation)
 	if err != nil {
 		return fmt.Errorf("failed to create pools. %+v", err)
 	}
@@ -176,7 +176,7 @@ func DeleteStore(context *clusterd.Context, store cephv1alpha1.ObjectStore) erro
 
 	// Delete the realm and pools
 	objContext := cephrgw.NewContext(context, store.Name, store.Namespace)
-	err = cephrgw.DeleteObjectStore(objContext)
+	err = cephrgw.DeleteObjectStore(objContext, !store.Spec.PreservePoolsOnRemove)
 	if err != nil {
 		return fmt.Errorf("failed to delete the realm and pools. %+v", err)
 	}
@@ -441,11 +441,13 @@ func validateStore(context *clusterd.Context, s cephv1alpha1.ObjectStore) error 
 	if s.Namespace == "" {
 		return fmt.Errorf("missing namespace")
 	}
-	if err := pool.ValidatePoolSpec(context, s.Namespace, &s.Spec.MetadataPool); err != nil {
-		return fmt.Errorf("invalid metadata pool spec. %+v", err)
-	}
-	if err := pool.ValidatePoolSpec(context, s.Namespace, &s.Spec.DataPool); err != nil {
-		return fmt.Errorf("invalid data pool spec. %+v", err)
+	if !s.Spec.SkipPoolCreation {
+		if err := pool.ValidatePoolSpec(context, s.Namespace, &s.Spec.MetadataPool); err != nil {
+			return fmt.Errorf("invalid metadata pool spec. %+v", err)
+		}
+		if err := pool.ValidatePoolSpec(context, s.Namespace, &s.Spec.DataPool); err != nil {
+			return fmt.Errorf("invalid data pool spec. %+v", err)
+		}
 	}
 
 	return nil

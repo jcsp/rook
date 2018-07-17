@@ -50,10 +50,13 @@ type realmType struct {
 	Realms []string `json:"realms"`
 }
 
-func CreateObjectStore(context *Context, metadataSpec, dataSpec model.Pool, serviceIP string, port int32) error {
-	err := createPools(context, metadataSpec, dataSpec)
-	if err != nil {
-		return fmt.Errorf("failed to create object pools. %+v", err)
+func CreateObjectStore(context *Context, metadataSpec, dataSpec model.Pool, serviceIP string, port int32, pools bool) error {
+	var err error
+	if pools {
+		err := createPools(context, metadataSpec, dataSpec)
+		if err != nil {
+			return fmt.Errorf("failed to create object pools. %+v", err)
+		}
 	}
 
 	err = createRealm(context, serviceIP, port)
@@ -63,7 +66,7 @@ func CreateObjectStore(context *Context, metadataSpec, dataSpec model.Pool, serv
 	return nil
 }
 
-func DeleteObjectStore(context *Context) error {
+func DeleteObjectStore(context *Context, pools bool) error {
 	stores, err := GetObjectStores(context)
 	if err != nil {
 		return fmt.Errorf("failed to detect object stores during deletion. %+v", err)
@@ -80,9 +83,11 @@ func DeleteObjectStore(context *Context) error {
 		lastStore = true
 	}
 
-	err = deletePools(context, lastStore)
-	if err != nil {
-		return fmt.Errorf("failed to delete object store pools. %+v", err)
+	if pools {
+		err = deletePools(context, lastStore)
+		if err != nil {
+			return fmt.Errorf("failed to delete object store pools. %+v", err)
+		}
 	}
 	return nil
 }
