@@ -221,10 +221,16 @@ type ObjectStoreList struct {
 // ObjectStoreSpec represent the spec of a pool
 type ObjectStoreSpec struct {
 	// The metadata pool settings
-	MetadataPool PoolSpec `json:"metadataPool"`
+	MetadataPool PoolSpec `json:"metadataPool,omitempty"`
 
 	// The data pool settings
-	DataPool PoolSpec `json:"dataPool"`
+	DataPool PoolSpec `json:"dataPool,omitempty"`
+
+	// Do not create Ceph pools.  Pools must have already been created in Ceph.
+	SkipPoolCreation bool `json:"skipPoolCreation"`
+
+	// Do not erase Ceph pools when this object is removed in Rook.
+	PreservePoolsOnRemove bool `json:"preservePoolsOnRemove"`
 
 	// The rgw pod info
 	Gateway GatewaySpec `json:"gateway"`
